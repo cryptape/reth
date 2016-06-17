@@ -1,0 +1,76 @@
+PATH
+  remote: ../ruby-devp2p
+  specs:
+    devp2p (0.3.0)
+      bitcoin-secp256k1 (~> 0.4)
+      block_logger (= 0.1.2)
+      concurrent-ruby (~> 1.0)
+      digest-sha3 (~> 1.1)
+      hashie (~> 3.4)
+      rlp (>= 0.7.1)
+
+PATH
+  remote: ../ruby-ethereum
+  specs:
+    ruby-ethereum (0.9.1)
+      bitcoin-secp256k1 (~> 0.4)
+      block_logger (~> 0.1)
+      devp2p (~> 0.3)
+      digest-sha3 (~> 1.1)
+      ethash (~> 0.2)
+      ffi (~> 1.9)
+      leveldb (= 0.1.9)
+      lru_redux (~> 1.1)
+      rlp (~> 0.6)
+      slop (~> 4.3)
+
+PATH
+  remote: .
+  specs:
+    reth (0.1.0)
+      devp2p (~> 0.3)
+      ruby-ethereum (~> 0.9)
+      slop (~> 4.3)
+
+GEM
+  remote: https://rubygems.org/
+  specs:
+    bitcoin-secp256k1 (0.4.0)
+      ffi (>= 1.9.10)
+    block_logger (0.1.2)
+      logging (~> 2.0)
+    concurrent-ruby (1.0.2)
+    digest-sha3 (1.1.0)
+    ethash (0.2.0)
+    ffi (1.9.10)
+    fiddler-rb (0.1.2)
+    hashie (3.4.4)
+    leveldb (0.1.9)
+      fiddler-rb (~> 0.1.1)
+    little-plugger (1.1.4)
+    logging (2.1.0)
+      little-plugger (~> 1.1)
+      multi_json (~> 1.10)
+    lru_redux (1.1.0)
+    minitest (5.8.3)
+    multi_json (1.12.1)
+    rake (10.5.0)
+    rlp (0.7.3)
+    serpent (0.3.0)
+    slop (4.3.0)
+    yard (0.8.7.6)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  devp2p!
+  minitest (= 5.8.3)
+  rake (~> 10.5)
+  reth!
+  ruby-ethereum!
+  serpent (~> 0.3)
+  yard (= 0.8.7.6)
+
+BUNDLED WITH
+   1.11.2

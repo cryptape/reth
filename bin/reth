@@ -1,0 +1,207 @@
+#!/usr/bin/env ruby
+
+$:.unshift File.expand_path('../../lib', __FILE__)
+
+require 'slop'
+require 'reth'
+
+class RethControl
+
+  Services = [
+    Reth::DBService,
+    Reth::AccountService,
+    DEVp2p::Discovery::Service,
+    DEVp2p::PeerManager,
+    Reth::ChainService
+  ].freeze
+
+  attr :app, :config
+
+  def initialize(options={})
+    load_config(options)
+    @app = Reth::App.new(@config)
+  end
+
+  def load_config(options)
+    datadir = options[:data_dir] or raise ArgumentError.new('missing datadir')
+    profile = if options[:network_id]
+                Reth::Profile.private(options[:network_id])
+              else
+                Reth::Profile.public(options[:profile].to_sym)
+              end
+
+    Reth::Config.setup(datadir)
+    @config = profile.deep_merge Reth::Config.load(datadir)
+
+    # TODO: allow bootstrap_node to be Array, merge with defaults
+    if options[:bootstrap_node]
+      @config.discovery.bootstrap_nodes = [ options[:bootstrap_node] ]
+    end
+
+    update_config_with_defaults @config, Reth::Config.get_default_config([Reth::App] + Services)
+    update_config_with_defaults @config, {eth: {block: Reth::Env::DEFAULT_CONFIG}}
+
+    genesis_from_config_file = @config.fetch(:eth, {})[:genesis]
+    if genesis_from_config_file
+      # Fixed genesis_hash take from profile must be deleted as custom genesis loaded
+      @config[:eth].delete :genesis_hash
+      @config[:eth][:genesis] = genesis_from_config_file
+    end
+
+    update_config_from_genesis_json @config[:eth][:genesis]
+
+    # TODO: bootstrap_nodes_from_config_file
+
+    @config = @config.deep_merge options
+
+    dump_config
+  end
+
+  def dump_config
+    puts_header 'CONFIGURATION'
+
+    cfg = @config.to_hash
+    alloc = cfg.fetch('eth', {}).fetch('block', {}).fetch('genesis_initial_alloc', {})
+    if alloc.size > 100
+      puts "omitting reporting of #{alloc.size} accounts in genesis"
+      cfg['eth']['block'].delete('genesis_initial_alloc')
+    end
+
+    puts cfg
+  end
+
+  def register_services
+    exclude_services = @app.config[:deactivated_services]
+    Services.each do |service|
+      raise ArgumentError, 'service must be DEVp2p::Service' unless service.instance_of?(Class) && service < DEVp2p::Service
+
+      next if exclude_services.include?(service.name)
+      service.register_with_app @app
+    end
+  end
+
+  def start
+    register_services
+
+    puts_header "starting"
+    @app.start
+
+    #trap("INT")  { @app.stop }
+    #trap("TERM") { @app.stop }
+    #trap("QUIT") { @app.stop }
+
+    #10000.times do |i|
+    #  sleep 2
+    #  @app.services.db.put i.to_s, Time.now.to_s
+    #  @app.services.db.commit
+    #end
+
+    evt_exit = Concurrent::Event.new
+    do_exit = proc do
+      @app.stop
+      evt_exit.set
+      puts "\nexit."
+    end
+
+    Signal.trap("INT", &do_exit)
+    Signal.trap("TERM", &do_exit)
+    Signal.trap("QUIT", &do_exit)
+
+    Thread.new { evt_exit.wait }.join
+  end
+
+  private
+
+  def puts_header(text)
+    puts "\n>>>>> #{text}"
+  end
+
+  def update_config_with_defaults(config, default_config)
+    DEVp2p::Utils.update_config_with_defaults config, default_config
+  end
+
+  def update_config_from_genesis_json(genesis_json_filename_or_hash)
+    genesis = genesis_json_filename_or_hash.instance_of?(String) ?
+      JSON.parse(File.read(genesis_json_filename_or_hash)) :
+      genesis_json_filename_or_hash
+
+    @config[:eth] ||= {}
+    @config[:eth][:block] ||= {}
+
+    id = ->(x) { x }
+    parse_int_or_hex = ->(x) { Reth::Utils.parse_int_or_hex(x) }
+    dec = ->(x) { Reth::Utils.decode_hex Reth::Utils.remove_0x_head(x) }
+
+    m = {
+      'alloc' => [:genesis_initial_alloc, id],
+      'difficulty' => [:genesis_difficulty, parse_int_or_hex],
+      'timestamp' => [:genesis_timestamp, parse_int_or_hex],
+      'extraData' => [:genesis_extra_data, dec],
+      'gasLimit' => [:genesis_gas_limit, parse_int_or_hex],
+      'mixhash' => [:genesis_mixhash, dec],
+      'parentHash' => [:genesis_prevhash, dec],
+      'coinbase' => [:genesis_coinbase, dec],
+      'nonce' => [:genesis_nonce, dec]
+    }
+
+    genesis.each do |k, v|
+      target_key, trans = m[k]
+      @config[:eth][:block][target_key] = trans.call v
+    end
+  end
+end
+
+format = "    %s                   %s"
+result = Slop.parse do |o|
+  o.separator ''
+  o.separator 'Commands:'
+  o.separator(format % ['run', 'Start the client (--dev to stop on error).'])
+
+  o.separator ''
+  o.separator 'Options:'
+
+  o.string '--profile', 'Configuration profile, livenet or testnet. [default: livenet]', default: 'livenet'
+  o.string '-c', '--config', 'Alternative configuration file.'
+  o.string '-C', 'Single configuration parameters (<param>=<value>).'
+  o.string '-d', '--data-dir', "Data directory. [default: #{Reth::Config::DEFAULT_DATA_DIR}]", default: Reth::Config::DEFAULT_DATA_DIR
+
+  o.string '-l', '--log-config', 'Logger configuration. [default: info]', default: 'info'
+  o.string '--log-file', 'Log to file instead of standard outputs.'
+
+  o.int '-n', '--network-id', 'Network id. Any number greater than 2 will create a private network. If specified predefined profile (by --profile) will not be used.'
+  o.string '-b', '--bootstrap-node', 'Single bootstrap node as enode://pubkey@host:port.'
+
+  o.bool '-m', '--mine', 'Enable miner. [default: disabled]', defalut: false
+  o.int '--mining-pct', 'CPU percentage used for mining.'
+
+  o.string '--unlock', 'Unlock an account (prompts for password).'
+  o.string '--password', 'Path to a password file.'
+
+  o.separator ''
+  o.separator 'Misc:'
+
+  o.on '-v', '--version' do
+    puts "version: #{Reth::CLIENT_VERSION_STRING}"
+    exit
+  end
+
+  o.on '-h', '--help' do
+    puts o
+    exit
+  end
+end
+opts = result.to_hash
+command = ARGV[0]
+
+Reth::Logger.level = opts[:log_config]
+
+# frontier genesis:
+# d4e56740f876aef8c010b86a40d5f56745a118d0906a34e69aec8c0db1cb8fa3
+
+case command
+when 'run'
+  RethControl.new(opts).start
+else
+  puts result
+end
+
