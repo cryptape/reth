@@ -39,5 +39,6 @@ require 'reth/db_service'
 require 'reth/leveldb_service'
 require 'reth/chain_service'
 
+require 'reth/jsonrpc'
 require 'reth/app'
 

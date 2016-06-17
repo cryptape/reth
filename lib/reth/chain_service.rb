@@ -21,7 +21,7 @@ module Reth
 
     MAX_NEWBLOCK_PROCESSING_TIME_STATS = 1000
 
-    attr :chain, :block_queue, :transaction_queue
+    attr :chain, :block_queue, :transaction_queue, :synchronizer
 
     def initialize(app)
       setup_db(app)

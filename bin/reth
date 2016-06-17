@@ -12,7 +12,8 @@ class RethControl
     Reth::AccountService,
     DEVp2p::Discovery::Service,
     DEVp2p::PeerManager,
-    Reth::ChainService
+    Reth::ChainService,
+    Reth::JSONRPC::Service
   ].freeze
 
   attr :app, :config

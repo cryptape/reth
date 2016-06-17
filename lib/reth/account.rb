@@ -5,6 +5,22 @@ module Reth
   class Account
 
     class <<self
+      def test_accounts
+        return @test_accounts if @test_accounts
+
+        @test_accounts = 9.times.map do |i|
+          privkey = (i+1).chr * 32
+          address = Ethereum::PrivateKey.new(privkey).to_address
+          ["0x#{Ethereum::Utils.encode_hex(address)}", privkey]
+        end.to_h
+
+        @test_accounts
+      end
+
+      def test_addresses
+        @test_addresses ||= test_accounts.keys.map {|k| Ethereum::Utils.normalize_address(k) }
+      end
+
       ##
       # Create a new account.
       #

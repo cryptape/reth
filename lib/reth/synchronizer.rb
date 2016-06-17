@@ -34,7 +34,7 @@ module Reth
 
     MAX_NEWBLOCK_AGE = 5 # maximum age (in blocks) of blocks received as newblock
 
-    attr :chain, :chainservice
+    attr :chain, :chainservice, :synctask
 
     ##
     # @param force_sync [Array, NilClass] If passed in array, it must be in
