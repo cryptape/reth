@@ -12,7 +12,7 @@ PATH
 PATH
   remote: ../ruby-ethereum
   specs:
-    ruby-ethereum (0.9.1)
+    ruby-ethereum (0.9.3)
       bitcoin-secp256k1 (~> 0.4)
       block_logger (~> 0.1)
       digest-sha3 (~> 1.1)
@@ -20,14 +20,14 @@ PATH
       ffi (~> 1.9)
       leveldb (= 0.1.9)
       lru_redux (~> 1.1)
-      rlp (~> 0.6)
+      rlp (= 0.7.3)
 
 PATH
   remote: .
   specs:
     reth (0.1.0)
       devp2p (~> 0.3)
-      ruby-ethereum (~> 0.9)
+      ruby-ethereum (= 0.9.3)
       sinatra (~> 1.4)
       sinatra-contrib (~> 1.4)
       slop (~> 4.3)

@@ -14,7 +14,7 @@ Gem::Specification.new do |s|
 
   s.files = Dir["{bin,lib}/**/*"] + ["LICENSE", "README.md"]
 
-  s.add_dependency('ruby-ethereum', '~> 0.9')
+  s.add_dependency('ruby-ethereum', '0.9.3')
   s.add_dependency('devp2p', '~> 0.3')
   s.add_dependency('slop', '~> 4.3')
   s.add_dependency('sinatra', '~> 1.4')
